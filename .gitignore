@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+data/
+*.csv
+*.json
+*.xlsx
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
