@@ -1,16 +1,20 @@
-import os
-import sys
-
+import psycopg2
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "src", "load"))
-from database import get_connection
 
-# =============================================================
-# Page config
-# =============================================================
+def get_connection() -> psycopg2.extensions.connection:
+    """Creates a PostgreSQL connection using Streamlit secrets."""
+    return psycopg2.connect(
+        host=st.secrets["DB_HOST"],
+        port=st.secrets["DB_PORT"],
+        dbname=st.secrets["DB_NAME"],
+        user=st.secrets["DB_USER"],
+        password=st.secrets["DB_PASSWORD"],
+        sslmode="require",
+    )
+
 
 st.set_page_config(
     page_title="EU Macro Tracker",
@@ -18,9 +22,6 @@ st.set_page_config(
     layout="wide",
 )
 
-# =============================================================
-# Data loading
-# =============================================================
 
 @st.cache_data
 def load_worldbank_indicator(indicator_code: str) -> pd.DataFrame:
@@ -68,30 +69,21 @@ def load_insee_monthly(series_code: str) -> pd.DataFrame:
     return df
 
 
-# =============================================================
-# Header
-# =============================================================
-
 st.title("📊 EU Macro Tracker")
 st.markdown(
     "**How have inflation, unemployment and growth evolved in France "
     "compared to other European countries since the 2022 crisis?**"
 )
 
-# Key insight
 inflation_df = load_worldbank_indicator("FP.CPI.TOTL.ZG")
 peak = inflation_df.loc[inflation_df["value"].idxmax()]
 st.info(
-    f"🔍 **Key insight:** Peak inflation in the dataset reached "
+    f"🔍 **Key insight:** Peak inflation reached "
     f"**{peak['value']:.1f}%** in **{int(peak['year'])}** "
-    f"(**{peak['country_name']}**) — the highest level since 2000."
+    f"(**{peak['country_name']}**) — highest level since 2000."
 )
 
 st.divider()
-
-# =============================================================
-# Inflation
-# =============================================================
 
 st.subheader("Inflation (annual %, WorldBank)")
 fig_inf = px.line(
@@ -103,10 +95,6 @@ fig_inf = px.line(
 fig_inf.update_layout(hovermode="x unified")
 st.plotly_chart(fig_inf, use_container_width=True)
 
-# =============================================================
-# Unemployment
-# =============================================================
-
 st.subheader("Unemployment rate (annual %, WorldBank)")
 unemp_df = load_worldbank_indicator("SL.UEM.TOTL.ZS")
 fig_unemp = px.line(
@@ -117,10 +105,6 @@ fig_unemp = px.line(
 )
 fig_unemp.update_layout(hovermode="x unified")
 st.plotly_chart(fig_unemp, use_container_width=True)
-
-# =============================================================
-# GDP
-# =============================================================
 
 st.subheader("GDP (current USD, WorldBank)")
 gdp_df = load_worldbank_indicator("NY.GDP.MKTP.CD")
@@ -134,10 +118,6 @@ fig_gdp = px.line(
 fig_gdp.update_layout(hovermode="x unified")
 st.plotly_chart(fig_gdp, use_container_width=True)
 
-# =============================================================
-# CPI France — monthly (INSEE)
-# =============================================================
-
 st.subheader("Consumer Price Index — France monthly (INSEE, Base 2015)")
 ipc_df = load_insee_monthly("ipc_france")
 fig_ipc = px.line(
@@ -146,9 +126,5 @@ fig_ipc = px.line(
     labels={"date": "Date", "value": "CPI Index"},
 )
 st.plotly_chart(fig_ipc, use_container_width=True)
-
-# =============================================================
-# Footer
-# =============================================================
 
 st.caption("Sources: World Bank API · INSEE BDM API · Built with Python, PostgreSQL, Streamlit")
