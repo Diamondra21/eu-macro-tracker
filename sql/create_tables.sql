@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS stg_worldbank_raw (
     indicator_code VARCHAR(50)     NOT NULL,
     indicator_name VARCHAR(200),
     year           INTEGER         NOT NULL,
-    value          NUMERIC(16, 4),
+    value          NUMERIC(20, 4),
     loaded_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     UNIQUE (country_code, indicator_code, year)
 );
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS stg_insee_raw (
     id_bank   VARCHAR(20)     NOT NULL,
     series    VARCHAR(100)    NOT NULL,
     period    VARCHAR(10)     NOT NULL,  -- format: YYYY-MM
-    value     NUMERIC(16, 4),
+    value     NUMERIC(20, 4),
     loaded_at TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     UNIQUE (id_bank, period)
 );
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS fact_indicators (
     country_id   INTEGER      NOT NULL REFERENCES dim_country(country_id),
     indicator_id INTEGER      NOT NULL REFERENCES dim_indicator(indicator_id),
     time_id      INTEGER      NOT NULL REFERENCES dim_time(time_id),
-    value        NUMERIC(16, 4),
+    value        NUMERIC(20, 4),
     loaded_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     UNIQUE (country_id, indicator_id, time_id)
 );
