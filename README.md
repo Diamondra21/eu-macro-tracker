@@ -1,22 +1,27 @@
 # EU Macro Tracker
 
-> ELT pipeline and interactive dashboard tracking macroeconomic indicators across France, Germany, Spain, and the EU (2015–2025).
+> ELT pipeline + interactive dashboard to track macro indicators across France, Germany, Spain and the EU (2015–2025)
 
-**🔗 [Live Dashboard](https://eu-macro-tracker.streamlit.app)** · Python · PostgreSQL · Docker · Streamlit
+**🔗 [Live Dashboard](https://eu-macro-tracker.streamlit.app)**
+
+![Dashboard preview](docs/dashboard.png)
+
+Python · PostgreSQL · Docker · Streamlit
 
 ---
 
 ## Business question
 
-*How have inflation, unemployment, and GDP evolved in France compared to its European neighbors since the 2022 crisis?*
+How did inflation, unemployment and GDP evolve in France vs its European neighbors since the 2022 crisis?
 
-**Context:** The 2022 energy crisis triggered asymmetric shocks across Europe. Understanding how each country absorbed inflation, maintained employment, and sustained growth matters for economic policy and investment decisions.
+**Context**
+The 2022 energy crisis affected countries differently. The goal is to compare how each one handled inflation, employment and growth.
 
-**Key findings:**
-- 🔴 **Inflation:** Spain peaked at 8.4% in 2022 vs 5.2% for France — France absorbed the energy shock significantly better than its neighbors
-- 📉 **Unemployment:** Spain's structural unemployment (>13% in 2022) is 4× Germany's (~3%) — a divergence that persists post-crisis
-- 📈 **GDP:** EU aggregate grew from ~13 700 to ~19 500 billion USD (2015–2024); France consistently outperforms Spain in absolute output
-- 🇫🇷 **French CPI (INSEE):** Rose ~15 points in 3 years (Jan 2021 → Dec 2024) — steepest increase since the 2015 index base
+**Key findings**
+- 🔴 **Inflation**: Spain peaked at 8.4% in 2022 vs 5.2% in France → France absorbed the shock better
+- 📉 **Unemployment**: Spain >13% in 2022 vs ~3% in Germany → gap still very large post-crisis
+- 📈 **GDP**: EU grew from ~13,700 to ~19,500 billion USD (2015–2024); France consistently ahead of Spain
+- 🇫🇷 **French CPI (INSEE)**: +15 points in 3 years (2021–2024) → fastest rise since base 2015
 
 ---
 
@@ -27,9 +32,9 @@
 | Inflation (CPI %) | World Bank | FR, DE, ES | Annual |
 | Unemployment (%) | World Bank | FR, DE, ES, EU | Annual |
 | GDP (current USD) | World Bank | FR, DE, ES, EU | Annual |
-| Public debt (% GDP) | World Bank | ES only | Annual |
-| CPI index (Base 2015) | INSEE BDM | France | Monthly |
-| Unemployment BIT | INSEE BDM | France | Quarterly |
+| Public debt (% GDP) | World Bank | ES | Annual |
+| CPI index (base 2015) | INSEE | France | Monthly |
+| Unemployment (BIT) | INSEE | France | Quarterly |
 
 ---
 
@@ -37,17 +42,17 @@
 
 ![Architecture](docs/architecture.png)
 
-Python extracts raw data from APIs and loads it as-is into PostgreSQL staging tables. SQL handles all transformations into a star schema. Python never transforms data.
+Python extracts data from APIs and loads it raw into PostgreSQL staging tables. All transformations are done in SQL (star schema). Python does not modify the data.
 
-> **Infrastructure:** PostgreSQL runs locally via Docker. In production, the dashboard connects to a Neon serverless PostgreSQL instance (Frankfurt).
+**Infrastructure:** PostgreSQL runs locally via Docker. In production, the app connects to Neon (serverless PostgreSQL, Frankfurt).
 
 | Step | Detail |
 |---|---|
-| Extract | `requests`, SDMX-XML parsing, exponential backoff retry |
-| Load | `psycopg2`, idempotent — `ON CONFLICT DO NOTHING` |
-| Transform | Pure SQL — `TRUNCATE + INSERT INTO SELECT` |
-| Validate | Post-transform row count checks on all 4 tables |
-| Orchestrate | `main.py` — full pipeline in one command |
+| Extract | `requests`, SDMX-XML parsing, retry with backoff |
+| Load | `psycopg2`, idempotent (`ON CONFLICT DO NOTHING`) |
+| Transform | SQL only (`TRUNCATE + INSERT INTO SELECT`) |
+| Validate | Row count checks on all tables |
+| Orchestrate | `main.py` runs the full pipeline |
 
 ---
 
@@ -59,12 +64,12 @@ Star schema — 2 staging tables · 3 dimensions · 1 fact table · 266 rows
 
 | Table | Description |
 |---|---|
-| `stg_worldbank_raw` | Raw World Bank responses |
-| `stg_insee_raw` | Raw INSEE XML responses |
+| `stg_worldbank_raw` | Raw World Bank data |
+| `stg_insee_raw` | Raw INSEE XML |
 | `dim_country` | FR, DE, ES, EU |
 | `dim_indicator` | 6 indicators with source and unit |
-| `dim_time` | Annual / monthly / quarterly periods |
-| `fact_indicators` | Values linked to country, indicator, time |
+| `dim_time` | Annual, monthly, quarterly |
+| `fact_indicators` | Values linked to country, indicator and time |
 
 ---
 
@@ -84,17 +89,17 @@ Star schema — 2 staging tables · 3 dimensions · 1 fact table · 266 rows
 git clone https://github.com/Diamondra21/eu-macro-tracker
 cd eu-macro-tracker
 pip install -r requirements.txt
-cp .env.example .env        # fill in your PostgreSQL credentials
-docker compose up -d        # start PostgreSQL
-python main.py              # extract → load → transform → validate
-streamlit run app.py        # localhost:8501
+cp .env.example .env
+docker compose up -d
+python main.py
+streamlit run app.py
 ```
 
 ---
 
 ## Data quality
 
-- **Idempotence** — identical results on repeated runs
-- **Null filtering** — missing values excluded at load time
-- **Validation** — automated row count checks post-transform
-- **Tests** — `pytest tests/` · 8 tests · data integrity + database state
+- Idempotent runs — same result every time
+- Null values filtered at load
+- Row count checks after transform
+- 8 pytest tests — data integrity and database state
